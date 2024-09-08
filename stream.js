@@ -1,24 +1,27 @@
-const express = require('express');
-const axios = require('axios');
+import express from 'express';
+import fetch from 'node-fetch';
 const app = express();
 app.use(express.json());
 
-app.post('/api/completion', async (req, res) => {
+app.post('/api/completion', (req, res) => {
   const { messages, model } = req.body;
 
-  try {
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+  fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    body: JSON.stringify({
       messages: messages,
       model: model,
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    res.json(response.data);
-  } catch (error) {
+      stream: true,
+    }),
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => {
+    response.body.pipe(res);
+  })
+  .catch(error => {
     console.error(error);
     const errorMessage = {
         error: `Error in calling OpenAI API: ${error.message}`,
@@ -26,7 +29,7 @@ app.post('/api/completion', async (req, res) => {
     };
     
     res.status(500).json(errorMessage);
-  }
+  });
 });
 
 const port = process.env.PORT || 3000;
